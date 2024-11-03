@@ -1,6 +1,8 @@
 import pandas as pd
 import examples_reference as er
 import rotten_tomatoes2000s as rt
+
+# Download latest version
 def init():
     # csv = pd.read_csv('data_sets\\movies_dataset.csv', nrows=20000)
     #
