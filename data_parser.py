@@ -17,6 +17,10 @@ MOVIES_CSV_PATH = '\\movies.csv\\movies.csv'
 CRITIC_REVIEWS_CSV_PATH = '\\critic_reviews.csv\\critic_reviews.csv'
 USER_REVIEWS_CSV_PATH = '\\user_reviews.csv\\user_reviews.csv'
 
+MOVIES_CSV_PATH_LINUX = '/movies.csv/movies.csv'
+CRITIC_REVIEWS_CSV_PATH_LINUX = '/critic_reviews.csv/critic_reviews.csv'
+USER_REVIEWS_CSV_PATH_LINUX = '/user_reviews.csv/user_reviews.csv'
+
 dummy_record = {'user_id': 921, 'rec_title': "dummy rec",
            'rec_mean_crit_score': 7.2,
            'rec_mean_user_score': 2,
@@ -26,12 +30,22 @@ dummy_record = {'user_id': 921, 'rec_title': "dummy rec",
            'user_prev_text_reviews': ["dummy1","dummy2"],
            'rec_user_verdict': "Negative"}
 
+    # path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
+    # print('Path to MOVIES_CSV_PATH {}'.format( path+MOVIES_CSV_PATH))
+    # print("Path to CRITIC_REVIEWS_CSV_PATH:", path+CRITIC_REVIEWS_CSV_PATH)
+    # print("Path to USER_REVIEWS_CSV_PATH:", path+USER_REVIEWS_CSV_PATH)
+
 class DataParser:
     def __init__(self):
         print("test if second init")
-        self.df_movies = pd.read_csv(DB_PATH + MOVIES_CSV_PATH,nrows=N_ROWS)
-        self.df_critic_reviews = pd.read_csv(DB_PATH + CRITIC_REVIEWS_CSV_PATH,nrows=N_ROWS)
-        self.df_user_reviews = pd.read_csv(DB_PATH + USER_REVIEWS_CSV_PATH,nrows=N_ROWS)
+        path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
+        print(path + MOVIES_CSV_PATH)
+        # self.df_movies = pd.read_csv(path + MOVIES_CSV_PATH,nrows=N_ROWS)
+        # self.df_critic_reviews = pd.read_csv(path + CRITIC_REVIEWS_CSV_PATH,nrows=N_ROWS)
+        # self.df_user_reviews = pd.read_csv(path + USER_REVIEWS_CSV_PATH,nrows=N_ROWS)
+        self.df_movies = pd.read_csv(path + MOVIES_CSV_PATH_LINUX,nrows=N_ROWS)
+        self.df_critic_reviews = pd.read_csv(path + CRITIC_REVIEWS_CSV_PATH_LINUX,nrows=N_ROWS)
+        self.df_user_reviews = pd.read_csv(path + USER_REVIEWS_CSV_PATH_LINUX,nrows=N_ROWS)
         self.df_users_with_movies = pd.DataFrame()
         self.df_meta_data = pd.DataFrame()
 
