@@ -1,14 +1,10 @@
-import pickle
-
-import tensorflow as tf
-import keras
+import numpy as np
 import pandas as pd
-import os
 import kagglehub
 import re
-import time
 import threading
 import multiprocessing
+from util import CsvFileHelper
 
 N_ROWS = 2000
 NUMBER_OF_THREADS = 4
@@ -21,15 +17,6 @@ MOVIES_CSV_PATH_LINUX = '/movies.csv/movies.csv'
 CRITIC_REVIEWS_CSV_PATH_LINUX = '/critic_reviews.csv/critic_reviews.csv'
 USER_REVIEWS_CSV_PATH_LINUX = '/user_reviews.csv/user_reviews.csv'
 
-dummy_record = {'user_id': 921, 'rec_title': "dummy rec",
-           'rec_mean_crit_score': 7.2,
-           'rec_mean_user_score': 2,
-           'movie_names': "dummy_name", 'movies_years': 2003,
-           'movies_crit_rating': 2.1, 'movies_users_rating': 2.1,
-           'movies_critics_text_reviews': "dummy text review",
-           'user_prev_text_reviews': ["dummy1","dummy2"],
-           'rec_user_verdict': "Negative"}
-
     # path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
     # print('Path to MOVIES_CSV_PATH {}'.format( path+MOVIES_CSV_PATH))
     # print("Path to CRITIC_REVIEWS_CSV_PATH:", path+CRITIC_REVIEWS_CSV_PATH)
@@ -37,7 +24,6 @@ dummy_record = {'user_id': 921, 'rec_title': "dummy rec",
 
 class DataParser:
     def __init__(self):
-        print("test if second init")
         path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
         print(path + MOVIES_CSV_PATH)
         # self.df_movies = pd.read_csv(path + MOVIES_CSV_PATH,nrows=N_ROWS)
@@ -48,12 +34,6 @@ class DataParser:
         self.df_user_reviews = pd.read_csv(path + USER_REVIEWS_CSV_PATH_LINUX,nrows=N_ROWS)
         self.df_users_with_movies = pd.DataFrame()
         self.df_meta_data = pd.DataFrame()
-
-    def test_for_picke(self,value):
-        df = pd.DataFrame()
-        df['name'] = " pid id {} value: {} \n".format(threading.get_ident(),value)
-        print("test picke")
-        return df
 
 
     def prepeare_and_create(self):
@@ -71,56 +51,22 @@ class DataParser:
                                      args=(user_sets[(i - 1) * step: i * step + adjust_step],)))
 
     def run(self):
-        user_sets = list(set(self.df_user_reviews['userId']))
-        step = int(len(user_sets) / 4)
-        adjust_step = len(user_sets) % 4
+        user_sets = np.array(list(set(self.df_user_reviews['userId'])))
+        print(type(user_sets))
+        user_sets_array = np.array_split(user_sets,4)
+        print(user_sets_array)
 
-        # print(self.namespace.df_users_with_movies)
-        # manager = multiprocessing.Manager()
-        # ns = manager.Namespace()
-        # ns.df_users_with_movies = pd.DataFrame()
-        with multiprocessing.Pool(3) as p:
-            print(p.map(self.test_for_picke,[["firstValue ,secondValue"],["thirdValue","fourthValue"],["kap","ks"]]))
+        with multiprocessing.Pool(4) as p:
+            print(p.map(self.add_user_to_new_pd, user_sets_array))
 
-
-        print(" size {} step {} adjust_step {} ".format( len(user_sets), step, adjust_step))
-        #Test thread
-        # thread1 = threading.Thread(target=self.test_for_picke, args=(ns,))
-        # thread2 = threading.Thread(target=self.test_for_picke, args=(ns,))
-        # thread3 = threading.Thread(target=self.test_for_picke, args=(ns,))
-        # thread4 = threading.Thread(target=self.test_for_picke, args=(ns,))
-        # thread1 = multiprocessing.Process(target=self.add_user_to_new_pd, args=(user_sets[0:step],))
-        # thread2 = multiprocessing.Process(target=self.add_user_to_new_pd, args=(user_sets[step:2 * step],))
-        # thread3 = multiprocessing.Process(target=self.add_user_to_new_pd, args=(user_sets[2 * step:3 * step],))
-        # thread4 = multiprocessing.Process(target=self.add_user_to_new_pd,
-        #                            args=(user_sets[3 * step:4 * step - 1 + adjust_step],))
-
-        # thread1.start()
-        # thread2.start()
-        # thread3.start()
-        # thread4.start()
-        # thread1.join()
-        # print("po join \n")
-        # thread2.join()
-        # print("po join 2\n")
-        # thread3.join()
-        # print("po join 3\n")
-        # thread4.join()
-
-        # print( self.process_queue.get())
         print(" \n ended all process  \n")
-        # while not self.process_queue.empty():
-        #     self.df_users_with_movies = pd.concat([self.df_users_with_movies,self.process_queue.get()])
-        # print(ns.df_users_with_movies)
-        # self.namespace.df_users_with_movies.to_csv('test.csv')
 
     def add_user_to_new_pd(self, user_set):
         print('thread {} started user set {}'.format(threading.get_ident(), len(user_set)))
+        df_users_with_movies = pd.DataFrame()
         for user_id in user_set:
             user_subset = self.df_user_reviews[self.df_user_reviews['userId'] == user_id]
-            # print(user_subset)
             # self.df_user_reviews = self.df_user_reviews.drop(index=user_subset.index)
-            # print('thread {} lifted lock empty subset: {}'.format(threading.get_ident(),user_subset.empty))
             if user_subset.empty is True:
                 continue
             """tutaj musze dropowac jeden film i w y dac positive / negative /medieocere bazujac na ocenie użytkownika. Są dwie opcje:
@@ -176,13 +122,11 @@ class DataParser:
                        'movies_critics_text_reviews': all_movies_critics_text_reviews,
                        'user_prev_text_reviews': user_subset['quote'].tolist(),
                        'rec_user_verdict': rec_movie_dic['rec_user_verdict']}
-            # self.namespace.df_users_with_movies = pd.concat([self.namespace.df_users_with_movies, pd.DataFrame.from_records(new_row)])
+            df_users_with_movies = pd.concat([df_users_with_movies, pd.DataFrame.from_records(new_row)])
 
-
-        # df_users_with_movies = pd.concat([df_users_with_movies,df_process_result ])
+        CsvFileHelper.save_data_frame(df_users_with_movies,threading.get_ident())
         print('thread {} ended   \n'.format(threading.get_ident()))
 
-        # self.process_queue.put(df_users_with_movies)
     def evaluate_user_verdict(self, rec_movie):
         user_verdict = rec_movie['rating'].iloc[0]
         if 0 <= user_verdict < 3.0:
