@@ -5,7 +5,7 @@ import re
 import threading
 import multiprocessing
 from util import CsvFileHelper
-
+import pyarrow as pa
 N_ROWS = 2000
 NUMBER_OF_THREADS = 4
 DB_PATH = 'data_sets\\rotten_tomatoes_Essential_2000s_Movies'
@@ -17,24 +17,20 @@ MOVIES_CSV_PATH_LINUX = '/movies.csv/movies.csv'
 CRITIC_REVIEWS_CSV_PATH_LINUX = '/critic_reviews.csv/critic_reviews.csv'
 USER_REVIEWS_CSV_PATH_LINUX = '/user_reviews.csv/user_reviews.csv'
 
-    # path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
-    # print('Path to MOVIES_CSV_PATH {}'.format( path+MOVIES_CSV_PATH))
-    # print("Path to CRITIC_REVIEWS_CSV_PATH:", path+CRITIC_REVIEWS_CSV_PATH)
-    # print("Path to USER_REVIEWS_CSV_PATH:", path+USER_REVIEWS_CSV_PATH)
+
+# path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
 
 class DataParser:
     def __init__(self):
         path = kagglehub.dataset_download("bwandowando/rotten-tomatoes-essential-2000s-movies")
-        print(path + MOVIES_CSV_PATH)
         # self.df_movies = pd.read_csv(path + MOVIES_CSV_PATH,nrows=N_ROWS)
         # self.df_critic_reviews = pd.read_csv(path + CRITIC_REVIEWS_CSV_PATH,nrows=N_ROWS)
         # self.df_user_reviews = pd.read_csv(path + USER_REVIEWS_CSV_PATH,nrows=N_ROWS)
-        self.df_movies = pd.read_csv(path + MOVIES_CSV_PATH_LINUX,nrows=N_ROWS)
-        self.df_critic_reviews = pd.read_csv(path + CRITIC_REVIEWS_CSV_PATH_LINUX,nrows=N_ROWS)
-        self.df_user_reviews = pd.read_csv(path + USER_REVIEWS_CSV_PATH_LINUX,nrows=N_ROWS)
+        self.df_movies = CsvFileHelper.get_movies_df()
+        self.df_critic_reviews = CsvFileHelper.get_critic_reviews_df()
+        self.df_user_reviews = CsvFileHelper.get_user_reviews_df()
         self.df_users_with_movies = pd.DataFrame()
         self.df_meta_data = pd.DataFrame()
-
 
     def prepeare_and_create(self):
         thread_list = []
@@ -48,25 +44,25 @@ class DataParser:
             else:
                 thread_list.append(
                     multiprocessing.Process(target=self.add_user_to_new_pd,
-                                     args=(user_sets[(i - 1) * step: i * step + adjust_step],)))
+                                            args=(user_sets[(i - 1) * step: i * step + adjust_step],)))
 
     def run(self):
         user_sets = np.array(list(set(self.df_user_reviews['userId'])))
-        print(type(user_sets))
-        user_sets_array = np.array_split(user_sets,4)
-        print(user_sets_array)
-
-        with multiprocessing.Pool(4) as p:
-            print(p.map(self.add_user_to_new_pd, user_sets_array))
+        self.add_user_to_new_pd(user_sets[:10])
 
         print(" \n ended all process  \n")
 
     def add_user_to_new_pd(self, user_set):
-        print('thread {} started user set {}'.format(threading.get_ident(), len(user_set)))
-        df_users_with_movies = pd.DataFrame()
+
+        # df_users_with_movies = pd.DataFrame({k: pd.Series(dtype=v) for k, v in CsvFileHelper.SCHEMA.items()})
+        rows_list =[]
+        # df_users_with_movies = pd.DataFrame()
+        i = 0
+        set_size = len(user_set)
         for user_id in user_set:
+            i += 1
             user_subset = self.df_user_reviews[self.df_user_reviews['userId'] == user_id]
-            # self.df_user_reviews = self.df_user_reviews.drop(index=user_subset.index)
+            self.df_user_reviews = self.df_user_reviews.drop(index=user_subset.index)
             if user_subset.empty is True:
                 continue
             """tutaj musze dropowac jeden film i w y dac positive / negative /medieocere bazujac na ocenie użytkownika. Są dwie opcje:
@@ -74,7 +70,7 @@ class DataParser:
             2. użytkownik ma tylko 1 film 
             """
             number_of_indexs = len(user_subset)
-            if number_of_indexs <= 1:
+            if number_of_indexs <= 3:
                 continue
             # pick recommended movie and fill data
             rec_movie = user_subset.sample(1)
@@ -85,7 +81,7 @@ class DataParser:
                                                                                  is_critic=True),
                              'rec_mean_user_score': self.evaluate_mean_avg_score(
                                  rec_movie_info['audience_score'].iloc[0]),
-                             'rec_user_verdict': self.evaluate_user_verdict(rec_movie)}
+                             'rec_user_verdict': self.evaluate_user_verdict(rec_movie)} #check later
 
             # drop recomended movie
             user_subset = user_subset.drop(index=rec_movie.index)
@@ -94,37 +90,55 @@ class DataParser:
             movies_years = []
             movies_crit_rating = []
             movies_users_rating = []
-            all_movies_critics_text_reviews = []
-            all_movie_user_text_review = []
+            # all_movies_critics_text_reviews = []
+            all_movies_critics_text_reviews = ""
+            all_movies_user_text_review = []
+
             # tutaj musze wypeniac nowy df
             for movieId in user_subset['movieId']:
                 movie_info = self.df_movies[self.df_movies['movieId'].str.match(movieId)]
-                movie_name = str(movie_info['movieTitle'].iloc[0])
-                movie_year = int(movie_info['movieYear'].iloc[0])
+                movie_name = movie_info['movieTitle'].iloc[0]
+                movie_year = movie_info['movieYear'].iloc[0]
                 movie_crit_rating = self.evaluate_mean_avg_score(movie_info['critic_score'].iloc[0], True)
                 movie_user_rating = self.evaluate_mean_avg_score(movie_info['audience_score'].iloc[0])
                 critic_subset = self.df_critic_reviews[self.df_critic_reviews['movieId'].str.match(movieId)]
-                critics_text_reviews = critic_subset['quote'].tolist()
+                for critic_text_review in critic_subset['quote'].tolist():
+                    all_movies_critics_text_reviews += str(critic_text_review)+";"
+                    print(all_movies_critics_text_reviews)
+                    # print(critic_text_review)
+                    # all_movies_critics_text_reviews.append(str(critic_text_review)
+                    #                                        .replace("\"","")
+                    #                                        .replace("'",""))
 
-                movies_names.append(movie_name)
-                movies_years.append(movie_year)
+                movies_names.append(str(movie_name))
+                movies_years.append(int(movie_year))
                 movies_crit_rating.append(movie_crit_rating)
                 movies_users_rating.append(movie_user_rating)
-                all_movies_critics_text_reviews.append(critics_text_reviews)
 
-            # print(type(rec_movie))
+            for user_review in user_subset['quote'].tolist():
+                all_movies_user_text_review.append(str(user_review))
 
-            new_row = {'user_id': user_id, 'rec_title': rec_movie_dic['rec_title'],
+            new_row = {'user_id': int(user_id),
+                       'movie_names': movies_names,
+                       'movies_years': movies_years,
+                       'movies_crit_rating': movies_crit_rating,
+                       'movies_users_rating': movies_users_rating,
+                       'movies_critics_text_reviews': f"\"{all_movies_critics_text_reviews}\"",
+                       'user_prev_text_reviews': all_movies_user_text_review,
+                       'rec_title': str(rec_movie_dic['rec_title']),
                        'rec_mean_crit_score': rec_movie_dic['rec_mean_crit_score'],
                        'rec_mean_user_score': rec_movie_dic['rec_mean_user_score'],
-                       'movie_names': movies_names, 'movies_years': movies_years,
-                       'movies_crit_rating': movies_crit_rating, 'movies_users_rating': movies_users_rating,
-                       'movies_critics_text_reviews': all_movies_critics_text_reviews,
-                       'user_prev_text_reviews': user_subset['quote'].tolist(),
-                       'rec_user_verdict': rec_movie_dic['rec_user_verdict']}
-            df_users_with_movies = pd.concat([df_users_with_movies, pd.DataFrame.from_records(new_row)])
+                       'rec_user_verdict': str(rec_movie_dic['rec_user_verdict'])}
 
-        CsvFileHelper.save_data_frame(df_users_with_movies,threading.get_ident())
+            rows_list.append(new_row)
+            # df_users_with_movies = pd.concat([df_users_with_movies, pd.DataFrame.from_records(new_row)])
+
+            if set_size / i == 4:
+                print(f'1/4 {i}')
+            elif set_size / i == 2:
+                print(f'1/2 {i}')
+
+        CsvFileHelper.save_rows_as_data_frame(rows_list)
         print('thread {} ended   \n'.format(threading.get_ident()))
 
     def evaluate_user_verdict(self, rec_movie):
