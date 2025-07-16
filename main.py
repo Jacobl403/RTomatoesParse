@@ -3,9 +3,8 @@ import time
 import pandas as pd
 
 import data_parser as dp
-import examples_reference
-from preprocessdata import PreprocessData
-from util import CsvFileHelper
+import  preproccesor_examples as pe
+
 
 #project name :HasbeMovie
 
@@ -21,13 +20,9 @@ def init():
 
 if __name__ == '__main__':
     # init() #do not run leave data with 2 values
-    PreprocessData().preprocess()
+    # PreprocessData().preprocess()
     # user = CsvFileHelper.get_user_reviews_df()
-
-    # print(type(CsvFileHelper.SCHEMA))
-    # examples_reference.more_examples()
-    # examples_reference.looking_into_pd()
-
+    pe.SBERTVectorizer()()
 
 
 

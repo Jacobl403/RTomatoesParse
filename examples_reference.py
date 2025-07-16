@@ -3,7 +3,6 @@ import tensorflow as tf
 import keras
 import numpy as np
 import gensim
-from preproccesors import Word2Vec,SBERTVectorizer
 from sklearn.preprocessing import OneHotEncoder
 from util import CsvFileHelper
 
