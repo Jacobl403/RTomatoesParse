@@ -23,9 +23,11 @@ class SBERTVectorizer:
         self.model = SentenceTransformer('all-MiniLM-L6-v2',device=None, trust_remote_code=False)
         self.data_to_process = CsvFileHelper.get_df_from_out_files()
 
+
     def __call__(self, *args, **kwargs):
         critics_reviews = self.data_to_process['movies_critics_text_reviews']
         embedings =self.model.encode(critics_reviews)
         print(f'###### embedings shape #####\n {embedings.shape}')
         print(f' embedings \n {embedings}')
+
 

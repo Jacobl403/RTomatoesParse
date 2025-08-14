@@ -1,9 +1,13 @@
 from util import CsvFileHelper
 from keras.src.layers import TextVectorization
 import tensorflow as tf
-import numpy as np
-#kers_core.layers.StringLookup` can be used for categorical value
 
+#kers_core.layers.StringLookup` can be used for categorical value
+"""
+todo:for this preprocessor i will probobly need some form of sanitizer since there is difference between word_2_wec and this in number of vocab for 5 records
+size of vocab word_2_vec 10504
+size of vocab text_vec 13983
+"""
 class KerasTextVectorizer:
     def __init__(self):
         #load file
@@ -15,11 +19,11 @@ class KerasTextVectorizer:
         pad_to_max_tokens if true then output columns will be padded to max_tokens=N
         for more info https://keras.io/api/layers/preprocessing_layers/text/text_vectorization/"""
         self.vectorizer = TextVectorization(output_mode='tf_idf')
-
-    def __call__(self, *args, **kwargs):
         # get text features
         critics_reviews = self.data_to_process['movies_critics_text_reviews']
-        self.vectorizer.adapt(critics_reviews)
+        self.vectorizer.adapt(critics_reviews) #should be called model
+
+    def __call__(self, *args, **kwargs):
         self.print_info()
 
 
@@ -96,5 +100,6 @@ class KerasTextVectorizer:
             print("hello")
             print(all_vectorized)
 
-
+    def get_vocab(self):
+        return self.vectorizer.get_vocabulary()
 
