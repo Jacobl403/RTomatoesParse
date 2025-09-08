@@ -18,21 +18,33 @@ def init():
     end = time.time()
     print("done saving data to test.csv. Executed in {} ... \n".format(float(end - start)))
 
+class GenTest:
+    def __init__(self):
+        self.gen = self._gen()
+
+    def _gen(self):
+        x = 0
+        while True:
+            yield x
+            x = x+1
+    """https://peps.python.org/pep-0533/"""
 
 if __name__ == '__main__':
     # init() #do not run leave data with 2 values
     # PreprocessData().preprocess()
     # user = CsvFileHelper.get_user_reviews_df()
-    word_2_vec = pe.Word2vector_vectorizer(use_gem_version=True)
-    keras_text_vec = KerasTextVectorizer()
-    vocab1=word_2_vec.get_vocab()
-    vocab2=keras_text_vec.get_vocab()
-    print("vocab of word_2_vec: \n",vocab1)
-    print("vocab of text_vec: \n",vocab2)
-    print("size of vocab word_2_vec",len(vocab1))
-    print("size of vocab text_vec",len(vocab2))
+    # word_2_vec = pe.Word2vector_vectorizer(use_gem_version=True)
+    # keras_text_vec = KerasTextVectorizer()
+    # vocab1=word_2_vec.get_vocab()
+    # vocab2=keras_text_vec.get_vocab()
+    # print("vocab of word_2_vec: \n",vocab1)
+    # print("vocab of text_vec: \n",vocab2)
+    # print("size of vocab word_2_vec",len(vocab1))
+    # print("size of vocab text_vec",len(vocab2))
     #todo: find proper data in keagle to use/ systemize data to make it clear what is used/ keep track on which data is used and save it to md or notion
     #todo: can also have a lazy day in which i create repository with all design patterns
+
+
 
 
 
